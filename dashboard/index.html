@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surveillance Salle Serveur</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #1E2125;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .title {
+            font-size: 24px;
+        }
+
+        .mode-switch {
+            background: #2d3035;
+            border-radius: 20px;
+            padding: 5px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #1E2125;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-logout:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.red { background: #dc3545; }
+        .stat-card.yellow { background: #ffc107; }
+        .stat-card.green { background: #28a745; }
+        .stat-card.blue { background: #17a2b8; }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            color: #fff;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .tab.active, .tab:hover {
+            background: #2d3035;
+        }
+
+        .content-area {
+            display: none;
+        }
+
+        .content-area.active {
+            display: block;
+        }
+
+        .content-card {
+            background: #2d3035;
+            border-radius: 10px;
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #404040;
+        }
+
+        tr:hover {
+            background: #353940;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #2d3035;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input, select {
+            background-color: #3d3d3d;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 5px;
+            color: #fff;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus, select:focus {
+            background-color: #4d4d4d;
+            transform: scale(1.02);
+        }
+
+        .alert-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #404040;
+            transition: 0.3s;
+        }
+
+        .alert-row:hover {
+            background: #353940;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .alert-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">Surveillance Salle Serveur</h1>
+        <div class="header-controls">
+        
+            <button class="btn-logout" onclick="handleLogout()">
+                <i class="fas fa-sign-out-alt"></i> Déconnexion
+            </button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card red" onclick="switchTab('alertes')">
+            <h3>Alertes</h3>
+            <div class="stat-value">1</div>
+        </div>
+        <div class="stat-card yellow">
+            <h3>Température</h3>
+            <div class="stat-value">--°C</div>
+        </div>
+        <div class="stat-card green" onclick="switchTab('acces')">
+            <h3>Accès</h3>
+            <div class="stat-value">6</div>
+        </div>
+        <div class="stat-card blue" onclick="switchTab('equipements')">
+            <h3>Équipements</h3>
+            <div class="stat-value">0</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <a href="#" class="tab" data-tab="acces">Accès</a>
+        <a href="#" class="tab active" data-tab="utilisateurs">Utilisateurs</a>
+        <a href="#" class="tab" data-tab="alertes">Alertes</a>
+        <a href="#" class="tab" data-tab="equipements">Équipements</a>
+    </div>
+
+    <div class="content-area active" id="utilisateurs">
+        <div class="content-card">
+            <div class="card-header">
+                <h2>Gestion des Utilisateurs</h2>
+                <button class="btn-primary" onclick="showAddModal()">
+                    <i class="fas fa-plus"></i> Nouvel Utilisateur
+                </button>
+            </div>
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th>Badge ID</th>
+                        <th>Niveau d'accès</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="content-area" id="alertes">
+        <div class="content-card">
+            <h2>Historique des Alertes</h2>
+            <div id="alertesContent"></div>
+        </div>
+    </div>
+
+    <div class="content-area" id="acces">
+        <div class="content-card">
+            <h2>Contrôle d'Accès</h2>
+            <!-- Contenu de la section accès -->
+        </div>
+    </div>
+
+    <div class="content-area" id="equipements">
+        <div class="content-card">
+            <h2>Gestion des Équipements</h2>
+            <!-- Contenu de la section équipements -->
+        </div>
+    </div>
+
+    <!-- Modal Ajout Utilisateur -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouvel Utilisateur</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="addUserForm" onsubmit="handleAddUser(event)">
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="password" name="mdp" placeholder="Mot de passe" required>
+                <input type="text" name="nom" placeholder="Nom" required>
+                <input type="text" name="prenom" placeholder="Prénom" required>
+                <select name="niveau_acces" required>
+                    <option value="">Sélectionner un niveau</option>
+                    <option value="0">0 - Aucun accès</option>
+                    <option value="1">1 - Accès basique</option>
+                    <option value="2">2 - Accès avancé</option>
+                </select>
+                <button type="submit" class="btn-primary">Ajouter</button>
+            </form>
+        </div>
+    </div>
+
+    
+    <!-- Modal Modification Utilisateur -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier Utilisateur</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editUserForm" onsubmit="handleEditUser(event)">
+                <input type="hidden" name="current_badge_id">
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="password" name="mdp" placeholder="Mot de passe">
+                <small style="color: #888;">Laissez vide pour garder le même mot de passe</small>
+                <input type="text" name="nom" placeholder="Nom" required>
+                <input type="text" name="prenom" placeholder="Prénom" required>
+                <input type="text" name="badge_id" placeholder="Badge ID" required>
+                <select name="niveau_acces" required>
+                    <option value="">Sélectionner un niveau</option>
+                    <option value="0">0 - Aucun accès</option>
+                    <option value="1">1 - Accès basique</option>
+                    <option value="2">2 - Accès avancé</option>
+                </select>
+                <button type="submit" class="btn-primary">Modifier</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Vérification du token
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('token')) {
+                window.location.href = 'login.html';
+            }
+            loadUsers();
+            loadAlerts();
+        });
+
+        // Gestion des modals
+        const addModal = document.getElementById('addUserModal');
+        const editModal = document.getElementById('editUserModal');
+        const closeBtns = document.querySelectorAll('.close');
+
+        function showAddModal() {
+            addModal.style.display = 'block';
+        }
+
+        async function showEditModal(badgeId) {
+            const user = await fetchUserData(badgeId);
+            if (user) {
+                const form = document.getElementById('editUserForm');
+                form.current_badge_id.value = user.badge_id;
+                form.email.value = user.email;
+                form.mdp.value = ''; // Le champ mot de passe reste vide
+                form.nom.value = user.nom;
+                form.prenom.value = user.prenom;
+                form.badge_id.value = user.badge_id;
+                form.niveau_acces.value = user.niveau_acces;
+                editModal.style.display = 'block';
+            }
+        }
+
+        closeBtns.forEach(btn => {
+            btn.onclick = function() {
+                addModal.style.display = 'none';
+                editModal.style.display = 'none';
+            }
+        });
+
+        window.onclick = function(event) {
+            if (event.target == addModal || event.target == editModal) {
+                addModal.style.display = 'none';
+                editModal.style.display = 'none';
+            }
+        }
+ 
+        // Chargement des utilisateurs
+        async function loadUsers() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:5000/utilisateurs', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const tbody = document.querySelector('#usersTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    data.data.forEach(user => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${user.nom}</td>
+                                <td>${user.prenom}</td>
+                                <td>${user.badge_id}</td>
+                                <td>${user.niveau_acces}</td>
+                                <td>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button class="btn-primary" onclick="showEditModal('${user.badge_id}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-danger" onclick="confirmDelete('${user.badge_id}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+ 
+                    document.querySelector('.stat-card.green .stat-value').textContent = data.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                if (error.status === 401) {
+                    window.location.href = 'login.html';
+                }
+            }
+        }
+ 
+// Chargement des alertes
+async function loadAlerts() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/alerte', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            const alertesContent = document.querySelector('#alertesContent');
+            alertesContent.innerHTML = '';
+            
+            data.data.forEach(alert => {
+                // Formatage de la date
+                const date = new Date(alert.date_acces).toLocaleString('fr-FR');
+                
+                // Affichage du nom d'utilisateur ou "Utilisateur supprimé" si NULL
+                const nomUtilisateur = alert.id_utilisateur 
+                    ? `ID: ${alert.id_utilisateur}` 
+                    : "Utilisateur supprimé";
+                
+                alertesContent.innerHTML += `
+                    <div class="alert-row">
+                        <div>ID Accès: ${alert.id_acces}</div>
+                        <div>Utilisateur: ${nomUtilisateur}</div>
+                        <div>Date: ${date}</div>
+                        <div>Type: ${alert.type_acces}</div>
+                    </div>
+                `;
+            });
+ 
+            document.querySelector('.stat-card.red .stat-value').textContent = data.data.length;
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+        // Gestion des formulaires
+        async function handleAddUser(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const userData = Object.fromEntries(formData);
+ 
+            try {
+                const response = await fetch('http://localhost:5000/utilisateurs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+ 
+                if (response.ok) {
+                    addModal.style.display = 'none';
+                    e.target.reset();
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Erreur lors de l\'ajout de l\'utilisateur');
+            }
+        }
+ 
+        async function handleEditUser(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const userData = Object.fromEntries(formData);
+            const currentBadgeId = userData.current_badge_id;
+            delete userData.current_badge_id;
+ 
+            try {
+                const response = await fetch(`http://localhost:5000/utilisateurs/${currentBadgeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+ 
+                if (response.ok) {
+                    editModal.style.display = 'none';
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Erreur lors de la modification de l\'utilisateur');
+            }
+        }
+
+        function confirmDelete(badgeId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+                deleteUser(badgeId);
+            }
+        }
+        
+        async function deleteUser(badgeId) {
+            try {
+                const response = await fetch(`http://localhost:5000/utilisateurs/${badgeId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+        
+                if (response.ok) {
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Erreur lors de la suppression de l\'utilisateur');
+            }
+        }
+ 
+        async function fetchUserData(badgeId) {
+            try {
+                const response = await fetch(`http://localhost:5000/utilisateurs/${badgeId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.data;
+                }
+            } catch (error) {
+                alert('Erreur lors de la récupération des données utilisateur');
+            }
+            return null;
+        }
+ 
+        // Gestion de la déconnexion
+        async function handleLogout() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:5000/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+ 
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = 'login.html';
+                }
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        }
+ 
+        // Gestion des onglets
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                
+                const contentId = tab.dataset.tab;
+                document.getElementById(contentId).classList.add('active');
+ 
+                if (contentId === 'utilisateurs') {
+                    loadUsers();
+                } else if (contentId === 'alertes') {
+                    loadAlerts();
+                }
+            });
+        });
+ 
+        // Fonction pour changer d'onglet
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                if(tab.dataset.tab === tabId) {
+                    tab.click();
+                }
+            });
+        }
+ 
+        // Rafraîchissement automatique
+        setInterval(() => {
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const contentId = activeTab.dataset.tab;
+                if (contentId === 'utilisateurs') {
+                    loadUsers();
+                } else if (contentId === 'alertes') {
+                    loadAlerts();
+                }
+            }
+        }, 30000);
+    </script>
+ </body>
+ </html>
